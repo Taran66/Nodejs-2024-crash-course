@@ -1,0 +1,3 @@
+
+GET /api/users/1
+GET /api/users/2

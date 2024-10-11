@@ -1,4 +1,5 @@
 import { createServer } from 'http'
+import fs from 'fs/promises';
 
 
 const PORT = process.env.PORT
@@ -8,12 +9,21 @@ const users = [
     {id: 3, name: 'Jim Doe'}
 ]
 
-
 //Logger middleware
 const logger = (req, res, next) =>{
-    console.log(`${req.method} ${req.url}`)
+    
+    const appendFile = async () => {
+        try{
+            await fs.appendFile('./test.txt', `\n${req.method} ${req.url}`)
+        } catch(error) {
+            console.log(error);
+        }
+    }
+    appendFile();
     next();
 }
+
+
 
 const jsonMiddleware = (req, res, next) => {
     res.setHeader('Content-Type', 'application/json')
@@ -41,6 +51,22 @@ const getUserByIdHandler = (req, res) => {
     res.end()
 }
 
+//ROute handler for POST /api/users
+const createUserHandler = (req, res) => {
+    let body = '';
+    //Listen for data
+    req.on('data', (chunk) => {
+        body += chunk.toString();
+    })
+    req.on('end',() => {
+        const newUser = JSON.parse(body);
+        users.push(newUser)
+        res.statusCode = 201;
+        res.write(JSON.stringify(newUser));
+        res.end();
+    })
+}
+
 const notFoundHandler = (req, res) => {
     res.statusCode = 404;
             res.write(JSON.stringify({message: 'Route not found'}));
@@ -54,7 +80,11 @@ const server = createServer((req, res) => {
                 getUsersHandler(req, res);
             } else if (req.url.match(/\/api\/users\/([0-9]+)/) && req.method === 'GET'){
                 getUserByIdHandler(req, res);
-            } else{
+            } else if(req.url === '/api/users' && req.method === 'POST'){
+                createUserHandler(req, res);
+            }
+            
+            else{
                 notFoundHandler(req, res)
             }
         })
